@@ -1,0 +1,135 @@
+@import url("https://fonts.googleapis.com/css2?family=Roboto&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@500&display=swap");
+body {
+  background-color: #fff;
+  font: 400 18px/22px "Roboto", sans-serif;
+  padding-top: 30px;
+}
+
+h2 {
+  font: 400 24px/28px "Roboto", sans-serif;
+}
+h3 {
+  margin: 0 0 24px 0;
+}
+.App, .enter {
+  text-align: left;
+  max-width: 650px;
+  margin: 0 auto;
+  padding: 0 5px;
+  padding-bottom: 20px;
+  
+}
+
+.App-header {
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  border-radius: 5px;
+  z-index: 100;
+  /* background-color: #fff; */
+  min-height: 10vh;
+  align-items: center;
+  color: white;
+  background-image: url(https://lh4.googleusercontent.com/QuWIIu1QGx7xszEwcZHl9EPUhMkBjB4CrLzI0jHw7v3d20mRlxNX9WyiljOj2Kv57m-19X3g0cQYXZk75EgU6nzfi_Tz52mEjbQGhGXv5L1s8DX-av-YimpJGUtnQR1fsg=w3196);
+  background-size: cover;
+  background-position: center;
+}
+
+.add {
+  text-align: center;
+  margin: 0 auto;
+  width: fit-content;
+  padding: 10px;
+  font: 600 18px/20px "Roboto", sans-serif;
+  display: block;
+  cursor: pointer
+}
+
+.add:hover {
+  background-color: rgb(175, 196, 197);
+}
+
+.addPhoto {
+  text-align: left;
+  margin: 0 0 20px;
+  display: block;
+  cursor: pointer
+}
+
+.photo {
+  text-align: left;
+  margin: 0 0 20px;
+  padding: 10px 0;
+}
+
+.photo label {
+  margin-right: 10px;
+  cursor: pointer;
+}
+
+.ant-card-head-title, .ant-form-item-label {
+  white-space: normal;
+  /* font: 600 20px/20px "Montserrat", sans-serif; */
+}
+
+
+
+
+
+
+.addAnketa {
+  text-align: left;
+  display: block;
+  margin-top: 15px;
+}
+
+.addAnketaText {
+  text-align: left;
+  width: 60%;
+  
+  display: block;
+  margin: 15px auto 20px;
+  border: 2px dotted red;
+  padding: 5px;
+}
+
+.ant-upload-list:before {
+  opacity: 0;
+}
+
+.ant-tooltip-open::before {
+  display: none;
+}
+
+.ant-radio-button-wrapper {
+  display: block;
+ 
+}
+
+
+
+
+
+
+.inputFoto {
+  display: none;
+  height: 0;
+  margin: 0;
+}
+
+
+
+
+textarea:valid {
+  color: green; 
+}
+
+
+
+input:valid { 
+  color: green; 
+}
+input:invalid { 
+  color: red; 
+}
