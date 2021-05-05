@@ -21,8 +21,7 @@ const dateFormat = "YYYY-MM-DD";
 function NewAnketa({ anketa }) {
 
   const [form] = Form.useForm();
-  const [spin, setSpin] = useState(true);  
-  const [phone, setPhone] = useState("");
+  const [spin, setSpin] = useState(true); 
   const [fields, setFields] = useState();
 
   //предварительная обработка image  Diplom и image cerificate MO
@@ -125,24 +124,25 @@ function NewAnketa({ anketa }) {
       url: `${url}${anketaSelect[Number(anketa) - 1]}`,
       data: values
     })
-      .then(() => {
-        setSpin(true)
+      .then(() => {       
         message.success({ content: "Ваша анкета отправлена на модерацию", duration: 4,style: {
           marginTop: "20vh",fontSize: 30 } })
       })
-      .catch(error => {
-        setSpin(true)
+      .catch(error => {       
         console.log(error.response);
-        if (error.response ?? false) {
+        if (error.response.status  !== 412) {
           for (const i of error.response.data.errors) {         
             message.error({ content: i.message, duration: 4,style: {
               marginTop: "20vh",fontSize: 30} 
             });
           }
         } else {
-          message.warn({ content: "Ошибка сервера. Попробуйте ешё раз.", duration: 4 })
+          message.warn({ content: `${error.response.data}`, duration: 4 ,style: {
+            marginTop: "20vh",fontSize: 30} 
+          })
         }        
       })
+      .finally(() => setSpin(true))
     console.log(values);
   }
   function disabledDate(current) {
@@ -261,8 +261,7 @@ function NewAnketa({ anketa }) {
           <Input
             placeholder="XXXXXXXXXX"
             title="10 цифр без пробелов и тире"
-            maxLength={10}
-            onChange={setPhone}
+            maxLength={10}            
             addonBefore="+7"
             pattern="[0-9]{3}[0-9]{3}[0-9]{2}[0-9]{2}"
           />
@@ -327,12 +326,12 @@ function NewAnketa({ anketa }) {
           >
             <Input
               placeholder="Дополнительная специальность"
-              pattern="[а-яА-ЯёЁ-\s]{1,255}"
+              pattern="[а-яА-ЯёЁ\-\s?]{1,255}"
             />
           </Form.Item>
           <Form.Item label="Специализация" name={["questionnaire", "specialization"]}>
             <Input
-              pattern="[а-яА-ЯёЁ,-. ]{1,255}"
+              pattern="[а-яА-ЯёЁ\,\-\.\s?]{1,255}"
               title="На лечении каких болезней специализируется врач"
               placeholder="Специализация"
             />
@@ -389,12 +388,13 @@ function NewAnketa({ anketa }) {
         />
         {anketa === 3 ? <>
           <h3><b>Действительный сертификат по специальности</b></h3>
-          <Form.Item label="Специальность" name={["questionnaire", "validCertificates", "specialization"]}
+          <Form.Item label="Специальность" 
+            name={["questionnaire", "validCertificates", "specialization"]}
             rules={[{ required: true, message: "Введите сертификат" }]}
           >
             <Input
               placeholder="Специальность"
-              pattern="[а-яА-ЯёЁ,- ]{1,255}"
+              pattern="[а-яА-ЯёЁ\,\-\s]{1,255}"
             />
           </Form.Item>
           <Form.Item label="Дата окончания"
@@ -402,8 +402,7 @@ function NewAnketa({ anketa }) {
             rules={[{ required: true }]}
           >
             <DatePicker
-              placeholder="Дата окончания"
-              // onChange={onDateEnd}
+              placeholder="Дата окончания"             
               format="YYYY-MM-DD" 
               locale={locale}              
             />
@@ -418,7 +417,7 @@ function NewAnketa({ anketa }) {
           <Form.Item label="Расписание работы" name={["questionnaire", "workSchedule"]}>
             <Input
               placeholder="Расписание работы"
-              pattern="[а-я,А-Я0-9- ]{1,}"
+              pattern="[а-я,А-Я0-9\-\s?]{1,}"
             />
           </Form.Item>  </>
           : null
@@ -444,7 +443,7 @@ function NewAnketa({ anketa }) {
           >
             <Input
               placeholder="Название учреждения"
-              pattern="[а-я А-Я]{1,15}"
+              pattern="[а-яА-ЯЁё\,\-\s]{1,15}"
             />
           </Form.Item>
           <Form.Item label="Специализация"
@@ -453,7 +452,7 @@ function NewAnketa({ anketa }) {
           >
             <Input
               placeholder="Специализация"
-              pattern="[а-я А-Я]{1,15}"
+              pattern="[а-яА-ЯЁё\,\s]{1,15}"
             />
           </Form.Item>
           <Form.Item label="Город" name={["questionnaire", "basicEducation", "city"]}
@@ -461,7 +460,7 @@ function NewAnketa({ anketa }) {
           >
             <Input
               placeholder="Город"
-              pattern="[а-я-А-ЯёЁ]{1,15}"
+              pattern="[а-я-А-ЯёЁ\s]{1,25}"
             />
           </Form.Item>         
          
@@ -479,19 +478,19 @@ function NewAnketa({ anketa }) {
           <Form.Item label="Название учреждения" name={["questionnaire", "internshipTraineeship", "institutionName"]}>
             <Input
               placeholder="Название учреждения"
-              pattern="[-а-яА-ЯёЁ №]{1,15}"
+              pattern="[\-\а-яА-ЯёЁ №\s]{1,255}"
             />
           </Form.Item>
           <Form.Item label="Специализация" name={["questionnaire", "internshipTraineeship", "specialization"]}>
             <Input
               placeholder="Специализация"
-              pattern="[а-я-А-ЯёЁ]{1,15}"
+              pattern="[а-я-А-ЯёЁ]{1,255}"
             />
           </Form.Item>
           <Form.Item label="Город" name={["questionnaire", "internshipTraineeship", "city"]}>
             <Input
               placeholder="Город"
-              pattern="[-а-яА-ЯёЁ]{3,25}"
+              pattern="[\-\а-яА-ЯёЁ]{3,25}"
             />
           </Form.Item>
           <h3><b>Аспирантура/Докторантура</b></h3>
@@ -506,13 +505,13 @@ function NewAnketa({ anketa }) {
           <Form.Item label="Название учреждения" name={["questionnaire", "graduateSchoolDoctorate", "institutionName"]}>
             <Input
               placeholder="Название учреждения"
-              pattern="[-а-яА-ЯёЁ №]{1,15}"
+              pattern="[-а-яА-ЯёЁ\№\s?]{1,255}"
             />
           </Form.Item>
           <Form.Item label="Специализация" name={["questionnaire", "graduateSchoolDoctorate", "specialization"]}>
             <Input
               placeholder="Специализация"
-              pattern="[-а-яА-ЯёЁ ]{1,}"
+              pattern="[-а-яА-ЯёЁ\s?]{1,}"
             />
           </Form.Item>
           <Form.Item label="Город" name={["questionnaire", "graduateSchoolDoctorate", "city"]}>

@@ -1,5 +1,4 @@
 import "antd/dist/antd.css";
-
 import "moment/locale/ru";
 import "../App.css";
 import axios from "axios";
@@ -16,6 +15,7 @@ const AddAnketa = ({text}) => {
   // // Стейты для копирования файлов 
   // const [fileImage, setFileImage] = useState([])
   const [fields, setFields] = useState()
+  const [spin, setSpin] = useState(true); 
   const [form] = Form.useForm()
   
  //отправляем анкету на сервер
@@ -39,7 +39,7 @@ const AddAnketa = ({text}) => {
     .then(res => {
       message.info({ content: "Ваша анкета изменена ", duration: 2 })
     })
-    .catch(error => console.log(error))
+    .catch(error => message.error({ content: "Ошибка записи. Попробуйте ешё раз", duration: 2 }))
   } else {
     axios({
       method: "POST",
@@ -58,6 +58,21 @@ const AddAnketa = ({text}) => {
       .then(res => {
         message.info({ content: "Ваша анкета отправлена на модерацию", duration: 2 })
       })
+      .catch(error => {       
+        console.log(error.response);
+        if (error.response.status  !== 412) {
+          for (const i of error.response.data.errors) {         
+            message.error({ content: i.message, duration: 4,style: {
+              marginTop: "20vh",fontSize: 30} 
+            });
+          }
+        } else {
+          message.warn({ content: `${error.response.data}`, duration: 4 ,style: {
+            marginTop: "20vh",fontSize: 30} 
+          })
+        }        
+      })
+      .finally(() => setSpin(true))
     console.log(values);
   }
 
@@ -68,8 +83,7 @@ const AddAnketa = ({text}) => {
     } else {
       var reader = new FileReader();
       reader.onloadend = function () { setFields([{ name: b, value: reader.result }]) };
-      reader.readAsDataURL(file);
-      console.log(file)
+      reader.readAsDataURL(file);      
     } 
     return (file.type === "image/jpeg" || file.size > 2000000) ? true : Upload.LIST_IGNORE;
   }
@@ -126,7 +140,7 @@ const AddAnketa = ({text}) => {
         setFields={setFields}
       />
       <UploadFile 
-        label="Заключение профпатолого" 
+        label="Заключение профпатолога" 
         name="conclusionOccupationalPathologist" 
         beforeUploadAdd={beforeUploadAdd}
         setFields={setFields}
@@ -161,17 +175,20 @@ const AddAnketa = ({text}) => {
             rules={[
               {
                 validator: (_, value) =>
-                  value ? Promise.resolve() : Promise.reject(new Error("Вы должны принять соглашение")),
+                  value ? Promise.resolve() : Promise.reject(new Error("Необходимо принять соглашение")),
               },
             ]}
           >
             <Checkbox>Согласен на обработку персональных данных</Checkbox>
           </Form.Item>
           <Form.Item {...tailFormItemLayout}>
-            <Button type="primary" htmlType="submit">
-              Сохранить
-            </Button>
-          </Form.Item>
+          {spin ? <Button type="primary" htmlType="submit" style={{width: "50%"}}>
+            Сохранить
+          </Button>:
+          <Button type="primary" loading style={{width: "50%"}}>
+            Сохранение
+          </Button>}
+        </Form.Item>
   </Form>)
 }
 export default AddAnketa;

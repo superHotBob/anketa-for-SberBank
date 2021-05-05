@@ -181,17 +181,21 @@ function Anketa() {
           setTitleDopAnketa("Заполните дополнительную анкету")
         }
       })
-      .catch(error => {
-        setSpin(true)
+      .catch(error => {       
         console.log(error.response);
-        if (error.response ?? false) {
+        if (error.response.status  !== 412) {
           for (const i of error.response.data.errors) {         
-            message.info({ content: i.message, duration: 2 });
+            message.error({ content: i.message, duration: 4,style: {
+              marginTop: "20vh",fontSize: 30} 
+            });
           }
         } else {
-          message.info({ content: "Ошибка сервера. Попробуйте ешё раз.", duration: 2 })
+          message.warn({ content: `${error.response.data}`, duration: 4 ,style: {
+            marginTop: "20vh",fontSize: 30} 
+          })
         }        
       })
+      .finally(() => setSpin(true))
   }, [storedJwt, history])
   //отправляем анкету на сервер
   function ResiveAnkete(values) {
@@ -223,20 +227,24 @@ function Anketa() {
       }
     })
       .then(res => {
-        setSpin(true)
+        
         message.info({ content: "Ваша анкета изменена ", duration: 2 })
       })
-      .catch(error => {
-        setSpin(true)
-        console.log(error.response.status);
-        if (error.response.status === 200) {
+      .catch(error => {       
+        console.log(error.response);
+        if (error.response.status  !== 412) {
           for (const i of error.response.data.errors) {         
-            message.info({ content: i.message, duration: 2 });
+            message.error({ content: i.message, duration: 4,style: {
+              marginTop: "20vh",fontSize: 30} 
+            });
           }
         } else {
-          message.info({ content: "Ошибка сервера. Попробуйте ешё раз.", duration: 2 })
+          message.warn({ content: `${error.response.data}`, duration: 4 ,style: {
+            marginTop: "20vh",fontSize: 30} 
+          })
         }        
       })
+      .finally(() => setSpin(true))
   }
   
   const formItemLayout = {
