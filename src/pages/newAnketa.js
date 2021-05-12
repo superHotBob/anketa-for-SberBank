@@ -2,7 +2,6 @@ import "../App.css";
 import axios from "axios";
 import "antd/dist/antd.css";
 import moment from "moment";
-
 import "moment/locale/ru";
 import { array , url} from "../data/data.js";
 import { UploadOutlined } from "@ant-design/icons";
@@ -11,18 +10,19 @@ import {
   Select, InputNumber, Checkbox, Upload, message
 } from "antd";
 import React, { useState, useEffect } from "react";
+import InputMask from 'react-input-mask';
 import TextArea from "antd/lib/input/TextArea";
 import UploadFile from "../components/upload/index.js";
 import locale from "antd/es/date-picker/locale/ru_RU.js";
 
 const { Option } = Select;
 const dateFormat = "YYYY-MM-DD";
-
 function NewAnketa({ anketa }) {
 
   const [form] = Form.useForm();
   const [spin, setSpin] = useState(true); 
   const [fields, setFields] = useState();
+  const YEAR = (new Date()).getFullYear();
 
   //предварительная обработка image  Diplom и image cerificate MO
   const beforeUploadDiplom = (file, b) => {
@@ -94,13 +94,12 @@ function NewAnketa({ anketa }) {
       newFileList.splice(index, 1);
       setFileImage(newFileList);
     }
-  }
-
- 
+  } 
   //список анкет для AXIOS
   const anketaSelect = ["c3", "clinic-partner", "mo"]
   //отправляем анкету на сервер
   function ResiveAnkete(values) {
+    const imageCourses = values.questionnaire.refresherCoursesImages;
     const s = values.questionnaire.validCertificates.dateEnd;
     let DoB = (
       values.questionnaire.dob ? values.questionnaire.dob.format(dateFormat): ""
@@ -108,9 +107,14 @@ function NewAnketa({ anketa }) {
     let DateEndCertif = (
       s ? s.format(dateFormat) : ""
     );
-    values.user.phone = Number("7"+ values.user.phone);
+    let ImageCourses = (
+      imageCourses ? values.questionnaire.refresherCoursesImages : []
+    );
+    values.user.phone = Number("7"+ values.user.phone.replace(/[^0-9]/g, ""));
+    values.user.insuranceNumber = Number(values.user.insuranceNumber.replace(/[^0-9]/g, ""));
     values.questionnaire.dob = DoB;
-    values.questionnaire.validCertificates.dateEnd = DateEndCertif;  
+    values.questionnaire.validCertificates.dateEnd = DateEndCertif; 
+    values.questionnaire.refresherCoursesImages = ImageCourses;
     setSpin(false);
     axios({
       method: "post",
@@ -126,19 +130,23 @@ function NewAnketa({ anketa }) {
     })
       .then(() => {       
         message.success({ content: "Ваша анкета отправлена на модерацию", duration: 4,style: {
-          marginTop: "20vh",fontSize: 30 } })
+          marginTop: "20vh",fontSize: 20 } })
       })
       .catch(error => {       
-        console.log(error.response);
-        if (error.response.status  !== 412) {
+        console.log(error);
+        if (error.response.status  === 500) {
+          message.warn({ content: 'Ошибка сервера. Попробуйте ещё раз', duration: 4 ,style: {
+            marginTop: "20vh",fontSize: 20} 
+          })       
+        } else if (error.response.status  !== 412) {
           for (const i of error.response.data.errors) {         
             message.error({ content: i.message, duration: 4,style: {
-              marginTop: "20vh",fontSize: 30} 
+              marginTop: "20vh",fontSize: 20} 
             });
           }
         } else {
           message.warn({ content: `${error.response.data}`, duration: 4 ,style: {
-            marginTop: "20vh",fontSize: 30} 
+            marginTop: "20vh",fontSize: 20} 
           })
         }        
       })
@@ -197,16 +205,16 @@ function NewAnketa({ anketa }) {
           >
             <Input             
               placeholder="Название МО"
-              pattern="[а-я А-ЯёЁ-]{3,40}"
-              title="русскими буквами"
+              maxLength={255}              
             />
           </Form.Item>
-          <p>Далее поля связанные с врачем</p>
+          <p>Далее поля связанные с врачом</p>
         </>
         }
         <h3><b>Общая информация о враче</b></h3>
-        <Form.Item label="* ФИО"
-          layout="inline"
+        <Form.Item label="ФИО"
+          layout="inline" name={[]}
+          rules={[{ required: true ,message:""}]}
           style={{ height: "auto",marginBottom: 0}}          
         >
           <Form.Item name={["user", "fullName", "last"]}
@@ -217,7 +225,7 @@ function NewAnketa({ anketa }) {
               title="русскими буквами"
               required
               placeholder="Фамилия"
-              pattern="[а-яА-ЯёЁ-]{1,15}"
+              pattern="[а-яА-ЯёЁ\-]{1,40}"
             />
           </Form.Item>
           <Form.Item name={["user", "fullName", "first"]} 
@@ -228,7 +236,7 @@ function NewAnketa({ anketa }) {
               placeholder="Имя"
               required
               title="русскими буквами"
-              pattern="[а-яА-ЯёЁ-]{2,15}"
+              pattern="[а-яА-ЯёЁ\-\s?]{2,40}"
             />
           </Form.Item>
           <Form.Item name={["user", "fullName", "middle"]} 
@@ -239,7 +247,7 @@ function NewAnketa({ anketa }) {
               required
               title="русскими буквами"
               placeholder="Отчество"
-              pattern="[а-яА-ЯёЁ-]{3,15}"
+              pattern="[а-яА-ЯёЁ]{3,40}"
             />
           </Form.Item>
         </Form.Item>
@@ -255,26 +263,57 @@ function NewAnketa({ anketa }) {
         <Form.Item label="Телефон" name={["user", "phone"]}
           rules={[{
             required: true,
-            message: "Введите ваш телефон в формате: 11 цифр без пробелов и тире"
+            message: "Введите ваш телефон в формате: 10 цифр без пробелов и тире"
           }]}
         >
-          <Input
+          <InputMask          
+              // onChange={onChangePhone} 
+              // value={phone}
+              
+              mask="(999)-(999)-(99)-(99)" 
+              maskChar="X"
+            >
+              {(inputProps) => <Input {...inputProps}                  
+                placeholder="(XXX)-(XXX)-(XX)-(XX)"
+                title="10 цифр без пробелов"            
+                addonBefore="+7"             
+                pattern="[0-9\(\)]{5}-[0-9\(\)]{5}-[0-9\(\)]{4}-[0-9\(\)]{4}"            
+              />}
+            </InputMask>
+          {/* <Input
             placeholder="XXXXXXXXXX"
             title="10 цифр без пробелов и тире"
             maxLength={10}            
             addonBefore="+7"
             pattern="[0-9]{3}[0-9]{3}[0-9]{2}[0-9]{2}"
-          />
+          /> */}
         </Form.Item>
         <Form.Item label="Снилс" name={["user", "insuranceNumber"]}
           rules={[{ required: true, message: "Введите ваш СНИЛС" }]}
         >
-          <Input.Password
+          <InputMask  
+            
+              // onChange={onChangeSnils} 
+              // value={snils} 
+            mask="999-999-999 99" 
+            maskChar="X"
+          >
+            {(inputProps)=><Input.Password  allowClear
+                        
+                {...inputProps}
+                placeholder="XXX-XXX-XXX XX"
+                title="11 цифр без пробелов"             
+                type="password"
+                pattern="[0-9]{3}-[0-9]{3}-[0-9]{3} [0-9]{2}"              
+              />
+            }
+          </InputMask>     
+          {/* <Input.Password
             placeholder="ХХХХХХХХХХХ"
             maxLength={11}
             title="11 цифр без пробелов и тире"
             pattern="[0-9]{3}[0-9]{3}[0-9]{3}[0-9]{2}"
-          />
+          /> */}
         </Form.Item>
         <Form.Item label="Город проживания" name={["user", "city"]}
           rules={[{ required: true, message: "Введите город проживания" }]}
@@ -282,7 +321,7 @@ function NewAnketa({ anketa }) {
           <Input
             title="русскими буквами"
             placeholder="Город проживания"
-            pattern="[а-яА-ЯёЁ-]{1,25}"
+            pattern="[а-яА-ЯёЁ\-\s?]{1,255}"
           />
         </Form.Item>
         {anketa === 3 ?
@@ -291,6 +330,7 @@ function NewAnketa({ anketa }) {
           >
             <Select
               showSearch
+              notFoundContent="Не найдена специальность"
               pattern="[а-яёА-ЯЁ-]{1,35}"
               placeholder="Выберите специальность"
             >
@@ -315,6 +355,7 @@ function NewAnketa({ anketa }) {
           >
             <Select
               showSearch
+              notFoundContent="Не найдена специальность"
               pattern="[а-яА-ЯёЁ-\s]{1,35}"
               placeholder="Выберите специальность"
             >
@@ -331,7 +372,7 @@ function NewAnketa({ anketa }) {
           </Form.Item>
           <Form.Item label="Специализация" name={["questionnaire", "specialization"]}>
             <Input
-              pattern="[а-яА-ЯёЁ\,\-\.\s?]{1,255}"
+              pattern="[а-яА-ЯёЁ\,-.'\s?]{1,255}"
               title="На лечении каких болезней специализируется врач"
               placeholder="Специализация"
             />
@@ -353,14 +394,14 @@ function NewAnketa({ anketa }) {
               getFieldValue(["questionnaire", "physicianAppointment", "type"]) === 1 ? (
                 <Form.Item label="C какого возраста"
                   name={["questionnaire", "physicianAppointment", "patientAge"]}
-                  rules={[{ required: true }]}
+                  rules={[{ required: true , message: "Введите возвраст"}]}
                 >
                   <InputNumber
                     min={1}
-                    max={20}
+                    defaultValue={10}
+                    max={18}
                     placeholder="Возраст"
                     title="для детского приема"
-                    initialvalue={1}
                   />
                 </Form.Item>
               ) : null
@@ -373,11 +414,10 @@ function NewAnketa({ anketa }) {
           rules={[{ required: true, message: "Введите год" }]}
         >
           <InputNumber
-            initialvalue={1970}
             placeholder="Год"
             maxLength={4}
             min={1970}
-            max={2021}
+            max={YEAR}
           />
         </Form.Item>
         <UploadFile
@@ -394,12 +434,12 @@ function NewAnketa({ anketa }) {
           >
             <Input
               placeholder="Специальность"
-              pattern="[а-яА-ЯёЁ\,\-\s]{1,255}"
+              pattern="[а-яА-ЯёЁ\,-'\s?]{1,255}"
             />
           </Form.Item>
           <Form.Item label="Дата окончания"
             name={["questionnaire", "validCertificates", "dateEnd"]}
-            rules={[{ required: true }]}
+            rules={[{ required: true,message:"Введите дату окончания" }]}
           >
             <DatePicker
               placeholder="Дата окончания"             
@@ -430,7 +470,6 @@ function NewAnketa({ anketa }) {
             name={["questionnaire", "basicEducation", "yearStart"]}
           >
             <InputNumber
-              initialvalue={1970}
               placeholder="Год"
               maxLength={4}
               min={1970}
@@ -443,7 +482,7 @@ function NewAnketa({ anketa }) {
           >
             <Input
               placeholder="Название учреждения"
-              pattern="[а-яА-ЯЁё\,\-\s]{1,15}"
+              pattern="[а-яА-ЯЁё\,-'\s?]{1,15}"
             />
           </Form.Item>
           <Form.Item label="Специализация"
@@ -452,7 +491,7 @@ function NewAnketa({ anketa }) {
           >
             <Input
               placeholder="Специализация"
-              pattern="[а-яА-ЯЁё\,\s]{1,15}"
+              pattern="[а-яА-ЯЁё\,'-\s?]{1,255}"
             />
           </Form.Item>
           <Form.Item label="Город" name={["questionnaire", "basicEducation", "city"]}
@@ -466,13 +505,13 @@ function NewAnketa({ anketa }) {
          
           <h3><b>Интернатура/Ординатура</b></h3>
           <Form.Item label="Год окончания"
-            name={["questionnaire", "internshipTraineeship", "yearEnd"]}>
+            name={["questionnaire", "internshipTraineeship", "yearEnd"]}
+          >
             <InputNumber
-              initialvalue={1970}
               placeholder="Год"
               maxLength={4}
               min={1970}
-              max={2021}
+              max={YEAR}
             />
           </Form.Item>
           <Form.Item label="Название учреждения" name={["questionnaire", "internshipTraineeship", "institutionName"]}>
@@ -484,7 +523,7 @@ function NewAnketa({ anketa }) {
           <Form.Item label="Специализация" name={["questionnaire", "internshipTraineeship", "specialization"]}>
             <Input
               placeholder="Специализация"
-              pattern="[а-я-А-ЯёЁ]{1,255}"
+              pattern="[а-яА-ЯёЁ]{1,255}"
             />
           </Form.Item>
           <Form.Item label="Город" name={["questionnaire", "internshipTraineeship", "city"]}>
@@ -499,7 +538,7 @@ function NewAnketa({ anketa }) {
               min={1970}
               placeholder="Год"
               maxLength={4}
-              max={2020}
+              max={YEAR}
             />
           </Form.Item>
           <Form.Item label="Название учреждения" name={["questionnaire", "graduateSchoolDoctorate", "institutionName"]}>
@@ -511,7 +550,7 @@ function NewAnketa({ anketa }) {
           <Form.Item label="Специализация" name={["questionnaire", "graduateSchoolDoctorate", "specialization"]}>
             <Input
               placeholder="Специализация"
-              pattern="[-а-яА-ЯёЁ\s?]{1,}"
+              pattern="[а-яА-ЯёЁ\-,'\s?]{1,255}"
             />
           </Form.Item>
           <Form.Item label="Город" name={["questionnaire", "graduateSchoolDoctorate", "city"]}>
@@ -532,9 +571,7 @@ function NewAnketa({ anketa }) {
           <Form.Item label="Дата окончания" name={["questionnaire", "validCertificates", "dateEnd"]}
             rules={[{ required: true, message: "Дата окончания" }]}
           >
-            <DatePicker placeholder="Дата окончания"
-              // onChange={onDateEndCertif}
-              
+            <DatePicker placeholder="Дата окончания"             
               format ={dateFormat}
               locale={locale}
             />
@@ -554,9 +591,9 @@ function NewAnketa({ anketa }) {
           <Form.Item label="Год окончания" name={["questionnaire", "refresherCourses", "yearEnd"]}>
             <InputNumber
               placeholder="Год"
-              pattern="[0-9]{1,}"
+              pattern="[0-9]{4}"
               min={1970}
-              max={2021}
+              max={YEAR}
               maxLength={4}
               minLength={4}
             />
@@ -564,7 +601,7 @@ function NewAnketa({ anketa }) {
           <Form.Item label="Наименования курсов" name={["questionnaire", "refresherCourses", "courseName"]}>
             <Input
               placeholder="Наименование курсов"
-              pattern="[0-9а-яА-ЯёЁ\-\s?]{1,255}"
+              pattern="[0-9а-яА-ЯёЁ\-\'\uxxxx\s?]{1,255}"
             />
           </Form.Item>
           <Form.Item label="Наименование учреждения" 
@@ -592,7 +629,7 @@ function NewAnketa({ anketa }) {
           <Form.Item label="Врачебная категория" name={["questionnaire", "medicalCategory"]}>
             <Input
               placeholder="Врачебная категория"
-              pattern="[а-я\-\,\.\А-ЯёЁ]{1,25}"
+              pattern="[а-я\-,.\А-ЯёЁ]{1,25}"
             />
           </Form.Item>
           <Form.Item label="Ученая степень" name={["questionnaire", "academicDegree"]}>

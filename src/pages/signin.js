@@ -2,10 +2,10 @@ import "../App.css";
 import axios from "axios";
 import "antd/dist/antd.css";
 import { useState } from "react";
+import InputMask from 'react-input-mask';
 import { urltoken } from "../data/data.js";
 import { Link, useHistory } from "react-router-dom";
 import { Button, Input, Form, message } from "antd";
-
 
 function Sign() {
   let history = useHistory()
@@ -17,26 +17,28 @@ function Sign() {
     axios({
       method: "post",
       url: urltoken,
-      data: { username: 7 + phone.replace("-", ""), password: snils }
+      data: { username: 7 + phone.replace(/[^0-9]/g, ""), password: snils.replace(/[^0-9]/g, "")}
     })
-      .then(res => {
+      .then(res => {        
         localStorage.setItem("token", res.data.token);
-        history.push(`/editanketa?member=${phone}`)
+        localStorage.setItem("refresh_token", res.data.refresh_token);
+        history.push('/editanketa');
       })
-      .catch(error => {
-        message.warn({ content: "Проверьте корректность введенных данных и попробуйте еще раз." });
-        history.push("/sign");
+      .catch(() => {
+        message.warn({ content: "Проверьте корректность введенных данных и попробуйте еще раз.",
+          duration:4,style:{marginTop: "20vh"} 
+        });       
         setPhone("");
         setSnils("");
       })
   }
-  const onChange = e => {
-    const { value } = e.target;
-   
-    const reg = /[0-9\s?]/;
-    if (reg.test(value)||value ==="") {
-       setPhone(value);
-    }
+  const onChangePhone = e => {
+    const { value } = e.target; 
+    setPhone(value);     
+  };
+  const onChangeSnils = e => {
+    const { value } = e.target;   
+    setSnils(value);      
   };
   const formItemLayout = {
     labelCol: {
@@ -74,32 +76,41 @@ function Sign() {
       <p>
         После авторизации вам будет доступно изменение данных, заполненных на
         первом этапе. А также ряд полей которые были изначально недоступны.
-      </p>
+      </p>   
         <Form layout="horizontal" onFinish={Authorization} form={form} {...formItemLayout}>
-          <Form.Item label="* Телефон">
-            <Input allowClear             
-              placeholder="XXX-XXX-XX-XX"
-              title="10 цифр без пробелов"
-              addonBefore="+7"
-              maxLength={13}
-              onChange={onChange}
+          <Form.Item label="* Телефон" >
+            <InputMask          
+              onChange={onChangePhone} 
+              value={phone}
               required
-              value={phone.replace(/(\d\d\d)(\d\d\d)(\d\d)(\d\d)/g, "$1-$2-$3-$4")}
-              pattern="[0-9]{3}-[0-9]{3}-[0-9]{2}-[0-9]{2}"
-            
-            />
+              mask="(999)-(999)-(99)-(99)" 
+              maskChar="X"
+            >
+              {(inputProps) => <Input {...inputProps}                  
+                placeholder="(XXX)-(XXX)-(XX)-(XX)"
+                title="10 цифр без пробелов"            
+                addonBefore="+7"             
+                pattern="[0-9\(\)]{5}-[0-9\(\)]{5}-[0-9\(\)]{4}-[0-9\(\)]{4}"            
+              />}
+            </InputMask>
           </Form.Item>
           <Form.Item label="* Снилс" >
-            <Input.Password  allowClear
-              required             
-              maxLength={11}
-              placeholder="XXX-XXX-XXX XX"
-              title="11 цифр без пробелов"
-              value={snils.replace(/(\d\d\d)(\d\d\d)(\d\d\d)(\d\d)/g, "$1-$2-$3 $4")}
-              type="password"
-              pattern="[0-9^\w]{3}-[0-9]{3}-[0-9]{3} [0-9]{2}"
-              onChange={(e) => setSnils(e.target.value)}
-            />
+            <InputMask  
+              alwaysShowMask="false" 
+              onChange={onChangeSnils} 
+              value={snils} 
+              mask="999-999-999 99" 
+              maskChar="X"
+            >
+              {(inputProps)=><Input.Password  allowClear
+                required            
+                {...inputProps}
+                placeholder="XXX-XXX-XXX XX"
+                title="11 цифр без пробелов"             
+                type="password"
+                pattern="[0-9]{3}-[0-9]{3}-[0-9]{3} [0-9]{2}"              
+              />}
+            </InputMask>     
           </Form.Item>
          
           <Form.Item {...tailFormItemLayout}>
@@ -112,5 +123,6 @@ function Sign() {
     </div>
   );
 }
+
 
 export default Sign;

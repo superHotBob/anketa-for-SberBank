@@ -7,7 +7,6 @@ import {Button,  Form,  message, Checkbox, Upload } from "antd";
 import React, { useState } from "react";
 import UploadFile from "../components/upload";
 
-
 const AddAnketa = ({text}) => {
   // let history = useHistory()
   // Токен
@@ -20,8 +19,10 @@ const AddAnketa = ({text}) => {
   
  //отправляем анкету на сервер
  function ResiveAddAnkete(values) {
+ 
    console.log(text.length)
   if (text.length !== 31) {
+    setSpin(false)
     axios({
       method: "PATCH",
       url: `${url}update/additional`,
@@ -40,7 +41,9 @@ const AddAnketa = ({text}) => {
       message.info({ content: "Ваша анкета изменена ", duration: 2 })
     })
     .catch(error => message.error({ content: "Ошибка записи. Попробуйте ешё раз", duration: 2 }))
+    .finally(() => setSpin(true))
   } else {
+    setSpin(false)
     axios({
       method: "POST",
       url: `${url}additional`,
@@ -63,19 +66,18 @@ const AddAnketa = ({text}) => {
         if (error.response.status  !== 412) {
           for (const i of error.response.data.errors) {         
             message.error({ content: i.message, duration: 4,style: {
-              marginTop: "20vh",fontSize: 30} 
+              marginTop: "20vh",fontSize: 20} 
             });
           }
         } else {
           message.warn({ content: `${error.response.data}`, duration: 4 ,style: {
-            marginTop: "20vh",fontSize: 30} 
+            marginTop: "20vh",fontSize: 20} 
           })
         }        
       })
       .finally(() => setSpin(true))
     console.log(values);
   }
-
 }  
   const beforeUploadAdd = (file, b) => {
     if (file.size > 2000000) {
@@ -86,8 +88,7 @@ const AddAnketa = ({text}) => {
       reader.readAsDataURL(file);      
     } 
     return (file.type === "image/jpeg" || file.size > 2000000) ? true : Upload.LIST_IGNORE;
-  }
-  
+  }  
   const formItemLayout = {
     labelCol: {
       xs: { span: 24 },

@@ -5,7 +5,8 @@ import { UploadOutlined } from "@ant-design/icons";
 import "moment/locale/ru";
 import "../App.css";
 import axios from "axios";
-import { array, urlget, url } from "../data/data.js";
+
+import { array, urlget, url, urltoken } from "../data/data.js";
 import { Link, useHistory } from "react-router-dom";
 import {
   Button, Input, Form,  DatePicker,
@@ -16,7 +17,6 @@ import TextArea from "antd/lib/input/TextArea";
 import AddAnketa from "./addAnketa";
 
 
-
 const { Option } = Select;
 
 const dateFormat = "YYYY-MM-DD";
@@ -24,8 +24,8 @@ const dateFormat = "YYYY-MM-DD";
 function Anketa() {
   // for routing
   let history = useHistory()
-  // Токен
-  const storedJwt = localStorage.getItem("token");
+  // Токены
+  
    // Вращение на кнопке "сохранить"
   const [spin, setSpin] = useState(true); 
   
@@ -44,8 +44,7 @@ function Anketa() {
     } else {
       var reader = new FileReader();
       reader.onloadend = function () { setFields([{ name: b, value: reader.result }]) };
-      reader.readAsDataURL(file);
-     
+      reader.readAsDataURL(file);     
     }
   }
   const [fotoCurses, setFotoCurses] = useState([])
@@ -84,12 +83,6 @@ function Anketa() {
   const [typeAnkete, setTypeAnkete] = useState(0)
   const [form] = Form.useForm()
   const [fields, setFields] = useState()
-  // определяем имя анкеты для заглавия
-  // const anketaName = typeAnkete === 1 ?
-  //   "в Сбер Здоровье" : typeAnkete === 2 ?
-  //     "врача из клиники партнера" : typeAnkete === 3 ?
-  //       "врача из регионального МО (для РГС)" : ""
-
 
   //список анкет для AXIOS
   const anketaSelect = ["c3", "clinic-partner", "mo"]
@@ -109,8 +102,7 @@ function Anketa() {
             setFields([{ name: ["user", "phone"], value: elem.substring(1) }]) ;
           } else {            
             setFields([{ name: ["user", i], value: elem }]);
-          }
-          console.log(i)
+          }          
         }
         const items = Object.entries(
           myData.questionnaireC3 ?? 
@@ -131,14 +123,11 @@ function Anketa() {
             setFields([{ name: ["questionnaire", "validCertificates", "specialization"], 
               value: ( myData.questionnaireC3 ??
                 myData.questionnaireClinicPartner ??
-                myData.questionnaireMo).validCertificates.specialization
-                 
+                myData.questionnaireMo).validCertificates.specialization                 
             }])
           }  else { 
-            setFields([{ name: ["questionnaire", i], value: elem }]);
-            
-          }
-          //console.log(i)
+            setFields([{ name: ["questionnaire", i], value: elem }]);            
+          }          
         }
       }, 500);
     };
@@ -148,65 +137,91 @@ function Anketa() {
 
 
 
-  // принимаем анкету с сервера 
-
-  useEffect(() => {
-    
-    axios.get(`${urlget}user/info`,
-      {
-        headers: {
-          "Access-Control-Allow-Headers": "Access-Control-Allow-Credentials,Access-Control-Allow-Origin,Access-Control-Allow-Method,Content-Type,Accept,Authorization",
-          "Authorization": `Bearer ${storedJwt}`,
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Method": "GET",
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Credentials": "true",
-          "Accept": "application/json",
+  // принимаем анкету с сервера  
+    function getData() {   
+      const storedToken = localStorage.getItem("token");
+      const storedRefresh_Token = localStorage.getItem("refresh_token"); 
+      axios.get(`${urlget}user/info`,
+        {
+          headers: {
+            "Access-Control-Allow-Headers": "Access-Control-Allow-Credentials,Access-Control-Allow-Origin,Access-Control-Allow-Method,Content-Type,Accept,Authorization",
+            "Authorization": `Bearer ${storedToken}`,
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Method": "GET",
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Credentials": "true",
+            "Accept": "application/json",
+          }
         }
-      }
-    )
+      )
       .then(res => {
-        setmyData(res.data)
-        console.log('Thie is enter data');
-        console.log(res.data);      
+        setmyData(res.data);        
         setoptionsWithDisabled([
           !res.data.questionnaireC3 ,
           !res.data.questionnaireClinicPartner,
           !res.data.questionnaireMo          
         ])
-        if( res.data.questionnaireAdditional) {
+        if( res.data.questionnaireAdditional ) {
 
         } else {
-          setTypeAnkete(4);
+          setTypeAnkete(4);          
           setTitleDopAnketa("Заполните дополнительную анкету")
         }
       })
       .catch(error => {       
-        console.log(error.response);
-        if (error.response.status  !== 412) {
+        console.log(error.response.status);
+        if( error.response.status  === 401) {
+          axios({
+            method: "POST",
+            url: `${urltoken}/refresh`,
+            data: { refresh_token: storedRefresh_Token }
+          })
+          .then(res => {
+            console.log(res.data);
+            localStorage.setItem("token", res.data.token);
+            localStorage.setItem("refresh_token", res.data.refresh_token);
+            getData();            
+          })
+          .catch((error) => {
+            console.log(error)      
+            message.info({ 
+              content:`С момента вашей авторизации прошло больше часа.
+              Необходимо повторная авторизация`, 
+              duration: 4 ,
+              style: {marginTop: "20vh"}                      
+            }).then( history.push('/sign') )
+          })  
+        } else if (error.response.status  !== 412) {
           for (const i of error.response.data.errors) {         
-            message.error({ content: i.message, duration: 4,style: {
-              marginTop: "20vh",fontSize: 30} 
-            });
+            message.error({ content: i.message,duration:4,style:{marginTop: "20vh"}});
           }
         } else {
-          message.warn({ content: `${error.response.data}`, duration: 4 ,style: {
-            marginTop: "20vh",fontSize: 30} 
+          message.warn({ content: `${error.response.data}`,duration:4,style:{
+            marginTop: "20vh"} 
           })
         }        
       })
       .finally(() => setSpin(true))
-  }, [storedJwt, history])
-  //отправляем анкету на сервер
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useEffect(() => getData(),[]);
+    const [newdata,setData] = useState({}) 
+  //отправляем изменнённую анкету на сервер
   function ResiveAnkete(values) {
+    newdata ? setData(values) : setData(newdata);
+    console.log('resive date on server');
+    console.log(values.questionnaire.validCertificates.dateEnd);
+    console.log(newdata);
+    const storedToken = localStorage.getItem("token");
+    const storedRefresh_Token = localStorage.getItem("refresh_token");
     setSpin(false)   
     let DoB = (
-      values.questionnaire.dob ? values.questionnaire.dob.format(dateFormat): ""
+      values.questionnaire.dob ? values.questionnaire.dob.format(dateFormat): null
     );
-     values.questionnaire.dob = DoB;
+    values.questionnaire.dob = DoB;
     let DateEndCertif = (
       values.questionnaire.validCertificates.dateEnd ? 
-      values.questionnaire.validCertificates.dateEnd.format(dateFormat) : ""
+      values.questionnaire.validCertificates.dateEnd.format(dateFormat) : null
     );
     values.questionnaire.validCertificates.dateEnd = DateEndCertif; 
     values.user.phone = Number("7"+ values.user.phone);   
@@ -218,7 +233,7 @@ function Anketa() {
       data: values,
       headers: {
         "Access-Control-Allow-Headers": "Access-Control-Allow-Credentials,Access-Control-Allow-Origin,Access-Control-Allow-Method,Content-Type,Accept,Authorization",
-        "Authorization": `Bearer ${storedJwt}`,
+        "Authorization": `Bearer ${storedToken}`,
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Method": "PATCH",
         "Content-Type": "application/json",
@@ -226,25 +241,43 @@ function Anketa() {
         "Accept": "application/json",
       }
     })
-      .then(res => {
-        
-        message.info({ content: "Ваша анкета изменена ", duration: 2 })
-      })
-      .catch(error => {       
-        console.log(error.response);
-        if (error.response.status  !== 412) {
-          for (const i of error.response.data.errors) {         
-            message.error({ content: i.message, duration: 4,style: {
-              marginTop: "20vh",fontSize: 30} 
-            });
-          }
-        } else {
-          message.warn({ content: `${error.response.data}`, duration: 4 ,style: {
-            marginTop: "20vh",fontSize: 30} 
+    .then(res => {        
+      message.info({content:"Ваша анкета изменена",duration:2,style:{marginTop:"20vh"}})
+    })
+    .catch(error => {       
+      console.log(error.response.status);
+      if( error.response.status  === 401) {
+        axios({
+            method: "POST",
+            url: `${urltoken}/refresh`,
+            data: { refresh_token: storedRefresh_Token}
           })
-        }        
-      })
-      .finally(() => setSpin(true))
+          .then(res => {
+            
+            localStorage.setItem("token", res.data.token);
+            localStorage.setItem("refresh_token", res.data.refresh_token);
+           
+            ResiveAnkete(newdata);
+            
+          })
+          .catch((error) => {
+            console.log(error);     
+            message.info({ 
+              content:`С момента вашей авторизации прошло больше часа.
+              Необходима повторная авторизация`, 
+              duration: 4 ,
+              style: {marginTop: "20vh"}                         
+            }).then(history.push('/sign'))
+          })  
+      } else if (error.response.status  !== 412) {
+          for (const i of error.response.data.errors) {         
+            message.error({content:i.message,duration:4,style:{marginTop:"20vh"}});
+          }
+      } else {
+          message.warn({content:`${error.response.data}`,duration:4,style:{marginTop:"20vh"}});
+      }        
+    })
+    .finally(() => setSpin(true))
   }
   
   const formItemLayout = {
@@ -286,23 +319,19 @@ function Anketa() {
     <div className="App">
       <Link to="/" className="App-header" title="на главную">
         <header className="App-header" />
-      </Link>
-
+      </Link>      
       { !myData ? <Spin tip="Загружается анкета..." /> : null}
 
-      { myData && <>  
-        
+      { myData && <>         
           <Select style={{ width: "100%", margin: "24px 0" }} onChange={selectAnkete}
             placeholder="Выберите анкету для изменения">
             <Option disabled={optionsWithDisabled[0]} value={1}>Анкета при трудоустройстве в СберЗдоровье</Option>
             <Option disabled={optionsWithDisabled[1]} value={2}>Анкета при подключении врача из клиники партнера</Option>
             <Option disabled={optionsWithDisabled[2]} value={3}>Анкета при подключении врача из регионального МО (для РГС)</Option>
             <Option  value={4}>Дополнительная анкета</Option>
-          </Select>
-     
+          </Select>     
         </>
       }
-
       { (typeAnkete !== 0 && typeAnkete !== 4) ?
         <Form
           layout="horizontal"
@@ -327,7 +356,7 @@ function Anketa() {
               <Input
                 required
                 placeholder="название Мо"
-                pattern="[-а-яА-ЯёЁ\s]{3,40}"
+                pattern="[a-zA-Zа-яА-ЯёЁ\-,\s]{3,40}"
                 title="русскими буквами"
               />
             </Form.Item>
@@ -359,7 +388,7 @@ function Anketa() {
                 placeholder="Имя"
                 required
                 title="русскими буквами"
-                pattern="[-а-яА-ЯёЁ]{2,15}"
+                pattern="[а-яА-ЯёЁ\-]{2,15}"
               />
             </Form.Item>
             <Form.Item name={["user", "fullName", "middle"]}
@@ -370,7 +399,7 @@ function Anketa() {
                 required
                 title="русскими буквами"
                 placeholder="Отчество"
-                pattern="[-а-яА-ЯёЁ]{3,15}"
+                pattern="[а-яА-ЯёЁ]{3,15}"
               />
             </Form.Item>
           </Form.Item>
@@ -384,11 +413,12 @@ function Anketa() {
             />
           </Form.Item>
           <Form.Item label="Телефон" name={["user", "phone"]}
-            rules={[{ required: true, message: "Введите ваш телефон в формате: 10 цифр без пробелов и тире!" }]}
-
+            rules={[{ required: true, 
+              message: "Введите ваш телефон в формате: 10 цифр без пробелов и тире!" }]}
           >
             <Input
               placeholder="XXXXXXXXXX"
+              disabled
               title="10 цифр без пробелов и тире"
               maxLength={10}              
               addonBefore="+7"
@@ -399,6 +429,7 @@ function Anketa() {
             rules={[{ required: true, message: "Введите ваш СНИЛС" }]}
           >
             <Input.Password
+              disabled
               placeholder="ХХХХХХХХХХХ"
               maxLength={11}
               title="11 цифр без пробелов и тире"
@@ -477,14 +508,15 @@ function Anketa() {
               {({ getFieldValue }) =>
                 getFieldValue(["questionnaire", "physicianAppointment", "type"]) === 1 ?
                   <Form.Item label="C какого возраста" 
-                    name={["questionnaire", "physicianAppointment", "patientAge"]}>
+                    name={["questionnaire", "physicianAppointment", "patientAge"]}
+                    rules={[{ required: true , message: "Введите возвраст"}]}
+                  >
                     <InputNumber
                       placeholder="Возраст"
                       min={1}
                       max={18}
                       initialvalue={1}
                     />
-
                   </Form.Item> : null
               }
             </Form.Item>
@@ -508,7 +540,6 @@ function Anketa() {
              
             </Upload>
           </Form.Item>
-
           {typeAnkete === 3 ? <>            
               <h3><b>Действительный сертификат по специальности</b></h3>
               <Form.Item label="Специальность" name={["questionnaire", "validCertificates", "specialization"]}
@@ -521,9 +552,8 @@ function Anketa() {
               </Form.Item>
               <Form.Item label="Дата окончания"
                 name={["questionnaire", "validCertificates", "dateEnd"]}
-                rules={[{ required: true }]}
-              >
-             
+                rules={[{ required: true, message: "Введите дату окончания" }]}
+              >             
                 <DatePicker
                   placeholder="Дата окончания"                  
                   format="YYYY-MM-DD" 
@@ -595,7 +625,7 @@ function Anketa() {
             >
               <Input
                 placeholder="Название учреждения"
-                pattern="[а-яА-ЯёЁ-№]{1,15}"
+                pattern="[а-яА-ЯёЁ-№]{1,255}"
               />
             </Form.Item>
             <Form.Item label="Специализация" 
@@ -603,13 +633,13 @@ function Anketa() {
             >
               <Input
                 placeholder="Специализация"
-                pattern="[а-яА-ЯёЁ,- ]{1,15}"
+                pattern="[а-яА-ЯёЁ\,\-\s?]{1,255}"
               />
             </Form.Item>
             <Form.Item label="Город" name={["questionnaire", "internshipTraineeship", "city"]}>
               <Input
                 placeholder="Город"
-                pattern="[-а-яА-ЯёЁ-]{3,25}"
+                pattern="[а-яА-ЯёЁ\-]{3,25}"
               />
             </Form.Item>
             <h3><b>Аспирантура/Докторантура</b></h3>
@@ -627,7 +657,7 @@ function Anketa() {
             >
               <Input
                 placeholder="Название учреждения"
-                pattern="[-а-яА-ЯёЁ №]{1,15}"
+                pattern="[а-яА-ЯёЁ\-,. №]{1,255}"
 
               />
             </Form.Item>
@@ -636,14 +666,14 @@ function Anketa() {
             >
               <Input
                 placeholder="Специализация"
-                pattern="[-а-яА-ЯёЁ ]{1,}"
+                pattern="[а-яА-ЯёЁ\,-.]{1,255}"
 
               />
             </Form.Item>
             <Form.Item label="Город" name={["questionnaire", "graduateSchoolDoctorate", "city"]}>
               <Input
                 placeholder="Город"
-                pattern="[-а-яА-ЯёЁ]{1,15}"
+                pattern="[а-яА-ЯёЁ\-]{1,40}"
               />
             </Form.Item>
 
@@ -655,7 +685,7 @@ function Anketa() {
             >
               <Input
                 placeholder="Название сертификата"
-                pattern="[а-яА-ЯёЁ,- ]{1,}"
+                pattern="[а-яА-ЯёЁ\,\-\s?]{1,}"
               />
             </Form.Item>
             <Form.Item label="Год окончания" 
@@ -677,16 +707,14 @@ function Anketa() {
                 <Button><UploadOutlined />Выберите файл</Button>
               </Upload>
             </Form.Item>
-
             
             <h3><b>Курсы повышения квалификации,семинары, мастерклассы</b></h3>
-
 
             <Form.Item label="Год окончания" name={["questionnaire", "refresherCourses", "yearEnd"]}>
 
               <InputNumber
                 placeholder="Год"
-                pattern="[0-9,]{1,}"
+                pattern="[0-9]{4}"
                 maxLength={4}
                 minLength={4}
 
@@ -695,19 +723,19 @@ function Anketa() {
             <Form.Item label="Наименования курсов" name={["questionnaire", "refresherCourses", "courseName"]}>
               <Input
                 placeholder="Наименование курсов"
-                pattern="[а-яА-ЯёЁ,- ]{1,}"
+                pattern="[а-яА-ЯёЁ\,-\s?]{1,255}"
               />
             </Form.Item>
             <Form.Item label="Наименование учреждения" name={["questionnaire", "refresherCourses", "institutionName"]}>
               <Input
                 placeholder="Наименование учреждения"
-                pattern="[-а-яА-ЯёЁ,- ]{1,}"
+                pattern="[а-яА-ЯёЁ\,-\s?]{1,255}"
               />
             </Form.Item>
             <Form.Item label="Специальность" name={["questionnaire", "refresherCourses", "specialization"]}>
               <Input
                 placeholder="Специальность"
-                pattern="[а-яА-ЯёЁ,- ]{1,}"
+                pattern="[а-яА-ЯёЁ\,-\s?]{1,255}"
               />
             </Form.Item>
             <Form.Item label="Фото курсов" name={["questionnaire", "refresherCoursesImages"]} >
@@ -721,13 +749,13 @@ function Anketa() {
             <Form.Item label="Врачебная категория" name={["questionnaire", "medicalCategory"]}>
               <Input
                 placeholder="Врачебная категория"
-                pattern="[а-яА-ЯёЁ,- ]{1,25}"
+                pattern="[а-яА-ЯёЁ,-.' ]{1,40}"
               />
             </Form.Item>
             <Form.Item label="Ученая степень" name={["questionnaire", "academicDegree"]}>
               <Input
                 placeholder="Ученая степень"
-                pattern="[а-яА-ЯёЁ,-]{1,}"
+                pattern="[а-яА-ЯёЁ,- ]{1,}"
               />
             </Form.Item>
             <Form.Item label="Членство в профессиональных организациях" style={{lineHeight:"16px"}}
@@ -760,14 +788,14 @@ function Anketa() {
             <Form.Item label="Научная деятельность" name={["questionnaire", "scientificActivity"]}>
               <Input
                 placeholder="Научная деятельность"
-                pattern="[а-яА-ЯёЁ,- ]{1,}"
+                pattern="[а-яА-ЯёЁ,-'' ]{1,}"
               />
             </Form.Item>
           </> : null}
           <Form.Item label="Описание" name={["questionnaire", "description"]} >
             <TextArea rows={5} showCount maxLength={1000}
               placeholder="Научная деятельность и прочие достижения"
-              pattern="[а-яА-ЯёЁ,-: ]{1,1000}"
+              pattern="[а-яА-ЯёЁ,:- ]{1,1000}"
               title="не более 1000 символов"
             />
           </Form.Item>

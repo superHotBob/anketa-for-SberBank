@@ -6,6 +6,7 @@ body {
   padding-top: 30px;
 }
 
+h1,
 h2 {
   font: 400 24px/28px "Roboto", sans-serif;
 }
@@ -124,7 +125,9 @@ h3 {
 textarea:valid {
   color: green; 
 }
-
+textarea:invalid {
+  color: red; 
+}
 
 
 input:valid { 
