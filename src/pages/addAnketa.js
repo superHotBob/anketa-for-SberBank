@@ -68,8 +68,7 @@ const AddAnketa = ({text}) => {
           })
         }        
       })
-      .finally(() => setSpin(true))
-    console.log(values);
+      .finally(() => setSpin(true))   
   }
 }  
   const beforeUploadAdd = (file, b) => {
