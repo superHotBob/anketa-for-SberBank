@@ -7,20 +7,13 @@ import {Button,  Form,  message, Checkbox, Upload } from "antd";
 import React, { useState } from "react";
 import UploadFile from "../components/upload";
 
-const AddAnketa = ({text}) => {
-  // let history = useHistory()
-  // Токен
-  const storedJwt = localStorage.getItem("token")
-  // // Стейты для копирования файлов 
-  // const [fileImage, setFileImage] = useState([])
+const AddAnketa = ({text}) => { 
+  const storedJwt = localStorage.getItem("token") 
   const [fields, setFields] = useState()
   const [spin, setSpin] = useState(true); 
-  const [form] = Form.useForm()
-  
- //отправляем анкету на сервер
- function ResiveAddAnkete(values) {
+  const [form] = Form.useForm()  
  
-   console.log(text.length)
+ function ResiveAddAnkete(values) { 
   if (text.length !== 31) {
     setSpin(false)
     axios({
