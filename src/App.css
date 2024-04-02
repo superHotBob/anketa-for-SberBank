@@ -40,7 +40,7 @@ h3 {
 .add {
   text-align: center;
   margin: 0 auto;
-  width: fit-content;
+  width: auto;
   padding: 10px;
   font: 600 18px/20px "Roboto", sans-serif;
   display: block;
